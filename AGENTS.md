@@ -24,7 +24,7 @@ short-story-assistant/
 
 ## Story Bible 核心工作流程
 
-系统严格依赖 `outline.md` 作为世界观种子的来源，遵循 **"大纲驱动 (Outline-Driven)"** 的创作闭环。
+系统将 `story/outline.md` 视为**核心数据源 (Single Source of Truth)**，所有构思与撰写动作均围绕此文档定义的“卡点”展开，形成**“大纲驱动 (Outline-Driven)”**的工业化生产闭环。
 
 ```mermaid
 flowchart TD
@@ -39,8 +39,10 @@ flowchart TD
     Read --> Plan["ReAct 构思阶段"]
     Plan --> Draft["ReAct 撰写阶段"]
     
-    Draft -->Publish["归档 chapters/"]
-    Publish --> Update["更新 Story Bible"]
+    Draft --> Publish["归档 chapters/"]
+    
+    Publish --> Audit["逻辑审计 (logic_checks.md)"]
+    Audit --> Update["润色与更新 (check-ai-rules.md)"]
     
     subgraph UpdateBible ["数据回写 (State Update)"]
         direction TB
@@ -106,7 +108,7 @@ flowchart TD
     - 决定故事走向。选项包括：[A]极致爽文（打脸清算）、[B]极致虐文（遗憾余韵）、[C]治愈救赎、[D]细思极恐/反转结局、[E]社会现实/讽刺、[F]其他。
 
 **生成逻辑**：
-当用户完成 1-5 步的选择后，AI 进行化学反应分析（ReAct），展现思考过程：
+当用户完成 1-5 步的选择后，AI 进行化学反应分析（ReAct），展现思考过程，并在正式生成全量文件前与用户进行一次核心设定确认：
 
 **AI 内部运行逻辑示例：**
 **[Observation]** 用户选择了：1-[B]脑洞创意 + 2-[A]读心术 + 3-[C]发现秘密 + 4-[D]人间清醒 + 5-[A]极致爽文。
@@ -114,38 +116,47 @@ flowchart TD
 *   分析化学反应：读心术 + 发现秘密 = **情报绝对领先**；人间清醒 + 极致爽文 = **绝不纠缠，暴力破局**。
 *   核心看点：主角在发现丈夫出轨的那一刻觉醒了读心术，她没有哭闹，而是冷静地听着丈夫和三儿计划如何转移她的财产，然后利用信息差步步为营，让对方净身出户并身败名裂。
 *   定调：**极致节奏、智商碾压、爽点爆发**。
-**[Action]** 生成逻辑自洽、卖点清晰的 `outline.md`、`characters.md`、`hooks.md`和`logic_checks.md`。
+**[Action]** 
+1.  **核心设定预览**：AI 基于上述思考，先输出大纲模板中的核心部分（书名、赛道、核心梗、简介等），请求用户确认。
+2.  **用户确认**：用户回复“确认”或提出修改建议。
+3.  **全量生成**：在用户确认后，加载模板生成 `outline.md` 及其他 Story Bible 文件。
 
 #### 执行流程 (Execution Flow):
 1. 扫描 `story/` 目录。
 2. 若 `outline.md` 缺失，立即执行 **五步初始化引导法** 与用户对话。
-3. 获得核心设定后，AI 提示：“爆款逻辑已确立，正在演化故事...”。
-4. 读取 `templates/` 目录下模板，自动生成 `outline.md`、`characters.md`、`hooks.md`和`logic_checks.md`。
-5. 反馈：`[系统] Story Bible 初始化完成。当前赛道：[赛道]，核心梗：[核心梗]。`
+3. 获得核心设定后，AI 提示：“爆款逻辑已确立，正在演化核心剧情预案...”。
+4. **[关键交互]** AI 模拟 [outline-template.md](templates/outline-template.md) 的 L3-L10 内容输出：
+    - **故事名称**、**题材赛道**、**核心视角**、**核心梗**、**情绪闭环**、**故事简介**。
+5. AI 询问：“以上核心设定是否符合您的预期？确认后将为您生成完整的 Story Bible。”
+6. 获得用户确认后，读取 `templates/` 目录下模板，自动生成 `outline.md`、`characters.md`、`hooks.md`和`logic_checks.md`。
+7. 反馈：`[系统] Story Bible 初始化完成。当前赛道：[赛道]，核心梗：[核心梗]。`
 
 ### 2. `update story`
-分析最近生成的正文，同步更新所有 World Bible 文件。
+对最新正文进行逻辑审计、润色处理（排版、去AI味、钩子强化），并同步更新所有 Story Bible 文件。
+
 #### 执行流程 (Execution Flow):
 
-- **功能**: 触发全量文档审查与更新。
+- **功能**: 触发正文逻辑审计、内容优化及全量文档审查与更新。
 - **流程 (强制执行)**:
-  1. 根据正文内容，同步更新characters.md,hooks.md。
-  2. 检查`outline.md`详细章节规划表是否存在后续待创作章节,如果不存在补充1-3个待创作章节(章节标题字数随机2-8字)，存在则不补充;更新**执行管理进度表**;
+  1. **逻辑审计 (Logic Audit)**：归档后立即执行。
+     - **审计标准**：参考 [logic_checks.md](story/logic_checks.md) 中的反转逻辑核对表。
+     - **执行逻辑**：记录审计结果。
+  2. **条件处理 (Branching)**:
+     - **审计不通过**：必须按照 [五、ReAct 创作协议](#五react-创作协议-react-protocol) 中的 **撰写阶段 (Phase: Draft - ReAct)** 流程对正文进行**重写 (Rewrite)**，修复逻辑漏洞。重写完成后进入润色环节。
+     - **审计通过**：直接进入润色环节。
+  3. **正文润色 (Polishing)**：**必须执行**。
+     - **排版优化**：每段不超过3行，对话独立成段，关键金句单独成行。
+     - **去AI化处理**：参考 [check-ai-rules.md](writespec/check-ai-rules.md) 执行。
+       - **摧毁逻辑感**：删除“因此、所以”等连接词，用动作/画面切换代替。
+       - **注入感官噪声**：将抽象情绪转化为生理反应（如：后背发凉、指甲抠进肉里）。
+       - **增加主观噪音**：加入第一人称吐槽、非理性思考，打破“平滑”叙事。
+     - **钩子强化**：若结尾悬念不足，重写或追加一个强悬念钩子。
+  4. **同步更新 (Sync Update)**：
+     - 根据优化后的正文，同步更新`characters.md`、`hooks.md`和`logic_checks.md`。
+     - 检查`outline.md`详细章节规划表是否存在后续待创作章节,如果不存在补充1-3个待创作章节(章节标题字数随机2-8字)，存在则不补充;更新**执行管理进度表**;
 - **触发时机**: 
   - 每写完一个完整情节或章节后。
-  - 发现新的世界观设定或模式时。
   - 用户显式要求更新时。
-
-### 3. `Polishing`
-针对正文进行去水、排版与钩子强化，确保符合番茄短故事的移动端阅读习惯。
-
-#### 执行流程 (Execution Flow):
-1. **Thought (审计)**：扫描正文，识别大段环境描写、超过3行的段落、AI味总结、以及章末钩子缺失。
-2. **Action (执行)**：
-   - **去水处理**：删除无意义环境描写。
-   - **手机端排版**：每段不超过3行，对话独立成段，关键金句单独成行。
-   - **钩子强化**：若结尾悬念不足，重写或追加一个强悬念钩子。
-3. **Observation (结果)**：展示修改后的段数、去水比例、以及新钩子的看点。
 
 ---
 
@@ -167,7 +178,7 @@ flowchart TD
 #### 3. 撰写阶段 (Phase: Draft - ReAct)
 - **参照规范**: [chapter-drafting-spec.md](writespec/chapter-drafting-spec.md)
 - **核心要求**: 黄金开局 (300-500字)、第一人称代入感、信息差核对、去 AI 味。
-- **输出要求**: 存储于 `chapters/` 目录，命名为 `XXXX-章节标题.md`。
+- **输出要求**: 存储于 `chapters/` 目录，命名为 `XX-章节标题.md`。
 
 ## 六、 绝对禁忌 (Absolute Taboos)
 1. **禁止慢热**：前1000字不进入冲突直接判定失败。
