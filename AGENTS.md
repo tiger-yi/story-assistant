@@ -6,6 +6,10 @@
 
 ```text
 short-story-assistant/
+├── chapters/                 # 正文章节存档 (01-标题.md)
+├── export/                   # 导出全书完稿
+├── metadata/                 # 作品元数据
+│   └── story-metadata.md     # 分类标签与封面提示词
 ├── story/
 │   ├── outline.md            # 5-8个关键情节点（卡点表）
 │   ├── characters.md         # 人物档案
@@ -18,7 +22,9 @@ short-story-assistant/
 │   └── characters-template.md   # 人物模板
 ├── writespec/
 │   ├── chapter-drafting-spec.md # 撰写正文规范
-│   └── logic-blueprint-spec.md  # 构思阶段执行规范
+│   ├── logic-blueprint-spec.md  # 构思阶段执行规范
+│   └── check-ai-rules.md        # AI去味与润色规则
+├── export_novel.py           # 全书导出脚本
 └── AGENTS.md                 # 本核心工作流文档
 ```
 
@@ -132,28 +138,34 @@ flowchart TD
 7. 反馈：`[系统] Story Bible 初始化完成。当前赛道：[赛道]，核心梗：[核心梗]。`
 
 ### 2. `update story`
-对最新正文进行逻辑审计、润色处理（排版、去AI味、钩子强化），并同步更新所有 Story Bible 文件。
+**指令说明**：调用 `story-polisher` 技能，全自动化执行正文逻辑审计、内容优化及 Story Bible 同步更新。若未指定章节，默认自动审计最新章节。
 
-#### 执行流程 (Execution Flow):
+#### 执行流程 (Execution Flow via Skill):
+当用户输入 `update story` 时，系统将直接调用 `story-polisher` 技能，该技能封装了以下自动化流水线：
 
-- **功能**: 触发正文逻辑审计、内容优化及全量文档审查与更新。
-- **流程 (强制执行)**:
-  1. **逻辑审计 (Logic Audit)**：归档后立即执行。
-     - **审计标准**：参考 [logic_checks.md](story/logic_checks.md) 中的反转逻辑核对表。
-     - **执行逻辑**：记录审计结果。
-  2. **条件处理 (Branching)**:
-     - **审计不通过**：必须按照 [五、ReAct 创作协议](#五react-创作协议-react-protocol) 中的 **撰写阶段 (Phase: Draft - ReAct)** 流程对正文进行**重写 (Rewrite)**，修复逻辑漏洞。重写完成后进入润色环节。
-     - **审计通过**：直接进入润色环节。
-  3. **正文润色 (Polishing)**：**必须执行**。
-     - **排版优化**：每段不超过3行，对话独立成段，关键金句单独成行。
-     - **去AI化处理**：参考 [check-ai-rules.md](writespec/check-ai-rules.md) 执行。
-       - **摧毁逻辑感**：删除“因此、所以”等连接词，用动作/画面切换代替。
-       - **注入感官噪声**：将抽象情绪转化为生理反应（如：后背发凉、指甲抠进肉里）。
-       - **增加主观噪音**：加入第一人称吐槽、非理性思考，打破“平滑”叙事。
-     - **钩子强化**：若结尾悬念不足，重写或追加一个强悬念钩子。
-  4. **同步更新 (Sync Update)**：
-     - 根据优化后的正文，同步更新`characters.md`、`hooks.md`和`logic_checks.md`。
-     - 检查`outline.md`详细章节规划表是否存在后续待创作章节,如果不存在补充1-3个待创作章节(章节标题字数随机2-8字)，存在则不补充;更新**执行管理进度表**;
+1.  **Step 0: 任务初始化 (Task Initialization)**
+    - **风格对齐**: 从 `story/outline.md` 读取“情绪闭环”确立基调，并根据用户本次指令进行微调。
+    - **TODO 生成**: 输出包含审计、决策、润色、更新四阶段的任务清单。
+
+2.  **Step 1: 逻辑审计 (Logic Audit)**
+    - 读取 `story/logic_checks.md` 标准，评估反转合理性与冲突强度。
+    - **连贯性检查**: 确保上一章结尾的状态（伤势、道具）在本章正确延续。
+    - **决策分支**:
+        - **FAIL**: 若存在严重逻辑漏洞，中止流程并输出重写建议。
+        - **PASS**: 若通过，进入润色环节。
+
+3.  **Step 2: 正文润色 (Polishing) - 核心环节**
+    - **视觉呼吸**: 强制 1-3 行分段，执行“7-2-1”律动（70%短句+10%长句宣泄）。
+    - **叙事重构 (Narrative Refactor)**: 基于 **七大黄金维度** 进行 ReAct 迭代：
+        - *去AI味/口语化*、*情绪密度*、*极端主观视角*、*Show Don't Tell*、*短句轰炸*、*极致反差*、*痛点锚定*。
+    - **红队扫描**: 自动检测并重写平稳对仗或抽象抒情的段落。
+    - **钩子强化**: 确保结尾悬念足以引发强烈的翻页冲动。
+
+4.  **Step 3: 同步更新 (Sync Update)**
+    - 解析润色后的文本，自动更新 `characters.md`（状态/人设/关系图谱）、`hooks.md`（伏笔状态）和 `logic_checks.md`（追加审计日志）。
+    - 检查`outline.md`详细章节规划表是否存在后续待创作章节,如果不存在补充1-3个待创作章节(章节标题字数随机2-8字)，存在
+则不补充;更新**字数规划**总字数
+
 - **触发时机**: 
   - 每写完一个完整情节或章节后。
   - 用户显式要求更新时。
