@@ -51,7 +51,7 @@ def main():
             full_content.append("\n\n" + "-" * 30 + "\n\n")
             
     # 3. Write Export
-    output_filename = f"《{title}》_全书完稿.txt"
+    output_filename = f"《{title}》_全书完稿.md"
     output_path = os.path.join(export_dir, output_filename)
     
     with open(output_path, 'w', encoding='utf-8') as f:
